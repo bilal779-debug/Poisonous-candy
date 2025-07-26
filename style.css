@@ -1,0 +1,154 @@
+/* style.css - Visual Upgrade Pack */
+* {
+  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  box-sizing: border-box;
+}
+
+/* ===== FLOATING CANDY BACKGROUND ===== */
+/* Removed: .floating-candies span and @keyframes float */
+
+/* ===== 3D CANDY BUTTONS ===== */
+#grid button {
+  font-size: 2rem;
+  background-color: #fff;
+  border-radius: 20px;
+  padding: 16px;
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.1);
+  transform-style: preserve-3d;
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" style="font-size:20px">🍭</svg>'), pointer;
+  border: none;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+#grid button:hover {
+  transform: translateY(-8px) rotateX(15deg);
+  box-shadow: 0 12px 20px rgba(251, 113, 133, 0.3);
+}
+
+#grid button:active {
+  transform: scale(0.95) rotateX(10deg);
+}
+
+.glass-selected {
+  background: rgba(173, 216, 230, 0.3) !important;
+  backdrop-filter: blur(4px);
+  border: 2px solid #60a5fa !important;
+  box-shadow: 0 0 8px rgba(96, 165, 250, 0.6) !important;
+  transform: scale(0.9) rotateX(30deg) !important;
+}
+
+/* ===== PULSING ACTION BUTTONS ===== */
+.btn-green, .btn-blue, .btn-red, .btn-purple {
+  padding: 12px 20px;
+  font-size: 16px;
+  border-radius: 14px;
+  color: #fff;
+  font-weight: bold;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  transform: perspective(1px) translateZ(0);
+  cursor: pointer;
+  border: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-green {
+  background-color: #34d399;
+  animation: pulse 2s infinite;
+}
+
+.btn-blue {
+  background-color: #60a5fa;
+  animation: pulse 2s infinite 0.5s;
+}
+
+.btn-red {
+  background-color: #f87171;
+  animation: pulse 2s infinite 1s;
+}
+
+.btn-purple {
+  background-color: #a855f7;
+  animation: pulse 2s infinite 1.5s;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+/* ===== INPUT FIELD ENHANCEMENTS ===== */
+.input {
+  padding: 12px 16px;
+  border: 2px solid #ff80ab;
+  border-radius: 12px;
+  outline: none;
+  font-size: 16px;
+  width: 100%;
+  max-width: 240px;
+  box-shadow: 0 0 8px rgba(255, 128, 171, 0.2);
+  background-color: #fff;
+  margin-bottom: 10px;
+  transition: all 0.3s;
+}
+
+.input:focus {
+  box-shadow: 0 0 15px rgba(255, 105, 180, 0.6);
+  transform: scale(1.03);
+}
+
+/* ===== AVATAR STYLING ===== */
+#avatarPreview, #yourAvatar, #opponentAvatar {
+  width: 10vmin;
+  height: 10vmin;
+  min-width: 40px;
+  min-height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid white;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+}
+
+/* ===== POPUP ENHANCEMENTS ===== */
+.popup {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  backdrop-filter: blur(5px);
+  /* Ensure popup content can scroll if it gets too tall */
+  overflow-y: auto; /* Added or changed to auto */
+}
+
+.popup-inner {
+  background: linear-gradient(135deg, #fff, #f9f9f9);
+  padding: 30px 40px;
+  border-radius: 20px;
+  box-shadow: 0 15px 25px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  transform: scale(0.95);
+  animation: popIn 0.3s forwards;
+  /* Add max-height and overflow-y for inner popup content if needed */
+  max-height: 90vh; /* Adjust as needed, e.g., 90% of viewport height */
+  overflow-y: auto; /* Allows content within the popup to scroll */
+}
+
+@keyframes popIn {
+  to { transform: scale(1); }
+}
+
+/* ===== CUSTOM CURSOR (OPTIONAL) ===== */
+body {
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" style="font-size:20px">🍬</svg>'), auto;
+  /* Make sure body can scroll if content exceeds viewport */
+  min-height: 100vh; /* Ensures body takes at least full viewport height */
+  overflow-y: auto; /* Allows vertical scrolling on the body */
+}
+
+#grid button:hover {
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" style="font-size:20px">💣</svg>'), pointer;
+}
