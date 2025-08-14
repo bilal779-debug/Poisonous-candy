@@ -1,0 +1,1547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Poisonous Candy</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <!-- NEW: Manifest for PWA functionality -->
+  <link rel="manifest" href="/manifest.json">
+  <!-- Firebase SDKs (Modular v11+) -->
+  <script type="module">
+    // Import all necessary Firebase modular functions (excluding Storage)
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { 
+      getAuth, 
+      createUserWithEmailAndPassword, 
+      signInWithEmailAndPassword, 
+      signOut, 
+      GoogleAuthProvider, 
+      signInWithPopup, 
+      sendPasswordResetEmail,
+      onAuthStateChanged,
+      setPersistence,
+      browserSessionPersistence,
+      browserLocalPersistence
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { 
+      getDatabase, 
+      ref, 
+      set, 
+      onValue, 
+      update, 
+      remove, 
+      get,
+      // Naye imports: Query functions
+      query,
+      orderByChild,
+      startAt,
+      endAt,
+      push // Push for unique IDs
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+
+    // Your web app's Firebase configuration - KEEP YOUR ACTUAL CONFIG HERE
+    const firebaseConfig = {
+      apiKey: "AIzaSyDed3PK5mO-Xet6YV-CT9_GoEh3rmBTn08", // Replace with your actual API Key
+      authDomain: "game-ede8f.firebaseapp.com",
+      databaseURL: "https://game-ede8f-default-rtdb.firebaseio.com",
+      projectId: "game-ede8f", // Your Project ID
+      storageBucket: "game-ede8f.appspot.com", // Not used, but keeping for config completeness
+      messagingSenderId: "234988659696",
+      appId: "1:234988659696:web:5168ce11a1ebc0d44d7335" 
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    
+    // Get Firebase service instances
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    // Expose all necessary Firebase instances and functions globally for main.js
+    window.auth = auth;
+    window.db = db;
+    window.GoogleAuthProvider = GoogleAuthProvider; 
+    window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
+    window.signInWithEmailAndPassword = signInWithEmailAndPassword;
+    window.signOut = signOut;
+    window.signInWithPopup = signInWithPopup;
+    window.sendPasswordResetEmail = sendPasswordResetEmail;
+    window.onAuthStateChanged = onAuthStateChanged;
+    window.setPersistence = setPersistence; // NEW: Expose setPersistence
+    window.browserSessionPersistence = browserSessionPersistence; // NEW: Expose session persistence
+    window.browserLocalPersistence = browserLocalPersistence; // NEW: Expose local persistence
+    window.ref = ref; 
+    window.set = set;
+    window.onValue = onValue;
+    window.update = update;
+    window.remove = remove;
+    window.get = get; 
+    window.push = push; // Expose push
+    // New exposed functions
+    window.query = query;
+    window.orderByChild = orderByChild;
+    window.startAt = startAt;
+    window.endAt = endAt;
+  </script>
+  <!-- Confetti library for win animation -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <!-- Main game logic (now a module) -->
+  <script type="module" defer src="Poison candy.js"></script>
+  <style>
+    /* Global styles for 100% screen fit */
+    body, html {
+      margin: 0;
+      padding: 0;
+      overflow: hidden; /* No scrolling for html/body */
+      height: 100vh; /* Full viewport height */
+      width: 100vw; /* Full viewport width */
+    }
+
+    /* Universal box-sizing */
+    * {
+      box-sizing: border-box;
+    }
+
+    /* ===== BASE THEME (LIGHT) ===== */
+    body.theme-light {
+        background: linear-gradient(135deg, #fef2f2, #fffbeb); /* Light pink to light yellow */
+        color: #333;
+    }
+    
+    body.theme-light #editProfilePopup .popup-inner {
+        background: linear-gradient(135deg, #ffffff, #fdfbfb);
+        border: 2px solid #a855f7;
+        box-shadow: 0 8px 25px rgba(168, 85, 247, 0.2);
+    }
+    body.theme-light #editProfilePopup h2 { color: #9333ea; }
+    body.theme-light #editProfilePopup label { color: #6b21a8; }
+    body.theme-light #editProfilePopup .input { border-color: #d8b4fe; }
+    body.theme-light #editProfilePopup .input:focus { border-color: #a855f7; box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.2); }
+    body.theme-light #editProfilePopup #editAvatarPreview { border-color: #a855f7; }
+    body.theme-light #editProfilePopup .btn-save { background-color: #8b5cf6; }
+    body.theme-light #editProfilePopup .btn-save:hover { background-color: #7c3aed; }
+    body.theme-light #editProfilePopup .btn-cancel { background-color: #f87171; }
+    body.theme-light #editProfilePopup .btn-cancel:hover { background-color: #ef4444; }
+
+    body.theme-light #rematchPopup .popup-inner {
+        background: linear-gradient(135deg, #ebf8ff, #f0fff4);
+        border: 2px solid #3b82f6;
+        box-shadow: 0 8px 25px rgba(59, 130, 246, 0.2);
+    }
+    body.theme-light #rematchPopup h2 { color: #2563eb; }
+    body.theme-light #rematchPopup .btn-yes { background-color: #22c55e; }
+    body.theme-light #rematchPopup .btn-yes:hover { background-color: #16a34a; }
+    body.theme-light #rematchPopup .btn-no { background-color: #ef4444; }
+    body.theme-light #rematchPopup .btn-no:hover { background-color: #dc2626; }
+
+
+    /* ===== DARK THEME ===== */
+    body.theme-dark {
+        background: linear-gradient(135deg, #2d3748, #1a202c); /* Dark gray to darker gray */
+        color: #e2e8f0; /* Light text */
+    }
+    body.theme-dark .app-container,
+    body.theme-dark .header-bar,
+    body.theme-dark .nav-bar,
+    body.theme-dark .game-mode-card,
+    body.theme-dark .player-vs-player,
+    body.theme-dark .info-card,
+    body.theme-dark .popup-inner,
+    body.theme-dark .input,
+    body.theme-dark .list-container,
+    body.theme-dark #gameInviteNotificationPopup,
+    body.theme-dark #inviteDeclinedNotificationPopup { /* Added for new notification */
+        background-color: #2d3748; /* Darker background for elements */
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+        border: 1px solid #4a5568;
+    }
+    body.theme-dark .section-title { color: #f87171; }
+    body.theme-dark .section-subtitle,
+    body.theme-dark .player-box span,
+    body.theme-dark .info-card,
+    body.theme-dark .tab-button,
+    body.theme-dark .list-item-info span,
+    body.theme-dark .list-item-info small,
+    body.theme-dark .popup-inner h2,
+    body.theme-dark .popup-inner label,
+    body.theme-dark .popup-inner p { color: #cbd5e1; }
+    body.theme-dark .top-icon,
+    body.theme-dark .nav-item { color: #a0aec0; }
+    body.theme-dark .nav-item.active,
+    body.theme-dark .nav-item:hover,
+    body.theme-dark .top-icon:hover { color: #a855f7; }
+    body.theme-dark .tab-button.active { background-color: #4a5568; color: #a855f7; border-bottom-color: #a855f7; }
+    body.theme-dark .tab-button:hover:not(.active) { background-color: #4a5568; color: #e2e8f0; }
+    body.theme-dark .list-item { border-bottom-color: #4a5568; }
+    body.theme-dark .btn-blue, body.theme-dark .btn-green { background-color: #4a5568; color: #e2e8f0; }
+    body.theme-dark .btn-blue:hover { background-color: #3b82f6; }
+    body.theme-dark .btn-green:hover { background-color: #22c55e; }
+    body.theme-dark .google-signin-button { background-color: #555; }
+    body.theme-dark .google-signin-button:hover { background-color: #333; }
+    body.theme-dark .toggle-button.on { background-color: #34d399; }
+    body.theme-dark .toggle-button.off { background-color: #ef4444; }
+    body.theme-dark #customConfirm .popup-inner { background-color: #4a5568; color: #e2e8f0; }
+    body.theme-dark #customConfirm #confirmMessage { color: #e2e8f0; }
+    body.theme-dark #confirmCancel { background-color: #60a5fa; color: white; }
+    body.theme-dark #confirmCancel:hover { background-color: #3b82f6; }
+    body.theme-dark #confirmOk { background-color: #f87171; color: white; }
+    body.theme-dark #confirmOk:hover { background-color: #ef4444; }
+    body.theme-dark .candy-btn { background-color: #e2e8f0; border: 2px solid #a0aec0; }
+    body.theme-dark .candy-btn.poison-candy { border: 3px solid #f87171; box-shadow: 0 0 15px rgba(248, 113, 113, 0.6); }
+    body.theme-dark .candy-btn:hover:not(:disabled) { border-color: #a855f7; }
+    body.theme-dark .glass-selected { background-color: rgba(96, 165, 250, 0.3) !important; border: 2px solid rgba(96, 165, 250, 0.6) !important; box-shadow: 0 4px 8px rgba(96, 165, 250, 0.3) !important; }
+
+    body.theme-dark #editProfilePopup .popup-inner { background: linear-gradient(135deg, #4a5568, #2d3748); border: 2px solid #a855f7; }
+    body.theme-dark #editProfilePopup h2 { color: #c084fc; }
+    body.theme-dark #editProfilePopup label { color: #d8b4fe; }
+    body.theme-dark #editProfilePopup .input { background-color: #1a202c; border-color: #4a5568; color: #e2e8f0; }
+    body.theme-dark #editProfilePopup .input:focus { border-color: #a855f7; box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.3); }
+    body.theme-dark #editProfilePopup #editAvatarPreview { border-color: #a855f7; }
+    body.theme-dark #editProfilePopup .btn-save { background-color: #8b5cf6; }
+    body.theme-dark #editProfilePopup .btn-save:hover { background-color: #7c3aed; }
+    body.theme-dark #editProfilePopup .btn-cancel { background-color: #f87171; }
+    body.theme-dark #editProfilePopup .btn-cancel:hover { background-color: #ef4444; }
+
+    body.theme-dark #rematchPopup .popup-inner { background: linear-gradient(135deg, #4a5568, #2d3748); border: 2px solid #34d399; }
+    body.theme-dark #rematchPopup h2 { color: #6ee7b7; }
+    body.theme-dark #rematchPopup .btn-yes { background-color: #22c55e; }
+    body.theme-dark #rematchPopup .btn-yes:hover { background-color: #16a34a; }
+    body.theme-dark #rematchPopup .btn-no { background-color: #ef4444; }
+    body.theme-dark #rematchPopup .btn-no:hover { background-color: #dc2626; }
+
+
+    /* ===== CANDYLAND THEME ===== */
+    body.theme-candyland {
+        background: linear-gradient(135deg, #ffb3e6, #a0d9ff, #ffe0b3); /* Pastel gradient */
+        color: #6a0572; /* Dark purple text */
+    }
+    body.theme-candyland .app-container,
+    body.theme-candyland .header-bar,
+    body.theme-candyland .nav-bar,
+    body.theme-candyland .game-mode-card,
+    body.theme-candyland .player-vs-player,
+    body.theme-candyland .info-card,
+    body.theme-candyland .popup-inner,
+    body.theme-candyland .input,
+    body.theme-candyland .list-container,
+    body.theme-candyland #gameInviteNotificationPopup,
+    body.theme-candyland #inviteDeclinedNotificationPopup { /* Added for new notification */
+        background-color: rgba(255, 255, 255, 0.8); /* Slightly transparent white */
+        box-shadow: 0 0 20px rgba(255, 105, 180, 0.4);
+        border: 1px solid #ff80ab;
+    }
+    body.theme-candyland .section-title { color: #ff69b4; }
+    body.theme-candyland .section-subtitle,
+    body.theme-candyland .player-box span,
+    body.theme-candyland .info-card,
+    body.theme-candyland .tab-button,
+    body.theme-candyland .list-item-info span,
+    body.theme-candyland .list-item-info small,
+    body.theme-candyland .popup-inner h2,
+    body.theme-candyland .popup-inner label,
+    body.theme-candyland .popup-inner p { color: #8b008b; }
+    body.theme-candyland .top-icon,
+    body.theme-candyland .nav-item { color: #da70d6; }
+    body.theme-candyland .nav-item.active,
+    body.theme-candyland .nav-item:hover,
+    body.theme-candyland .top-icon:hover { color: #ff1493; }
+    body.theme-candyland .tab-button.active { background-color: #ffc0cb; color: #ff1493; border-bottom-color: #ff1493; }
+    body.theme-candyland .tab-button:hover:not(.active) { background-color: #ffe4e1; color: #ff69b4; }
+    body.theme-candyland .list-item { border-bottom-color: #ffc0cb; }
+    body.theme-candyland .btn-blue { background-color: #87ceeb; }
+    body.theme-candyland .btn-blue:hover { background-color: #6495ed; }
+    body.theme-candyland .btn-green { background-color: #90ee90; }
+    body.theme-candyland .btn-green:hover { background-color: #3cb371; }
+    body.theme-candyland .btn-red { background-color: #ff6347; }
+    body.theme-candyland .btn-red:hover { background-color: #dc143c; }
+    body.theme-candyland .google-signin-button { background-color: #ffb6c1; color: #8b008b; }
+    body.theme-candyland .google-signin-button:hover { background-color: #ff99aa; }
+    body.theme-candyland .toggle-button.on { background-color: #34d399; }
+    body.theme-candyland .toggle-button.off { background-color: #ef4444; }
+    body.theme-candyland .candy-btn { background-color: white; border: 2px solid #ff69b4; }
+    body.theme-candyland .candy-btn.poison-candy { border: 3px solid #ff0000; box-shadow: 0 0 15px rgba(255, 0, 0, 0.6); }
+    body.theme-candyland .candy-btn:hover:not(:disabled) { border-color: #ff1493; }
+    body.theme-candyland .glass-selected { background-color: rgba(135, 206, 235, 0.3) !important; border: 2px solid rgba(135, 206, 235, 0.6) !important; box-shadow: 0 4px 8px rgba(135, 206, 235, 0.3) !important; }
+
+    body.theme-candyland #editProfilePopup .popup-inner { background: linear-gradient(135deg, #fff0f5, #f0f8ff); border: 2px solid #ff69b4; }
+    body.theme-candyland #editProfilePopup h2 { color: #ff1493; }
+    body.theme-candyland #editProfilePopup label { color: #db7093; }
+    body.theme-candyland #editProfilePopup .input { border-color: #ffb6c1; }
+    body.theme-candyland #editProfilePopup .input:focus { border-color: #ff69b4; box-shadow: 0 0 0 3px rgba(255, 105, 180, 0.3); }
+    body.theme-candyland #editProfilePopup #editAvatarPreview { border-color: #ff69b4; }
+    body.theme-candyland #editProfilePopup .btn-save { background-color: #ff69b4; }
+    body.theme-candyland #editProfilePopup .btn-save:hover { background-color: #ff1493; }
+    body.theme-candyland #editProfilePopup .btn-cancel { background-color: #ff7f50; }
+    body.theme-candyland .btn-cancel:hover { background-color: #ff6347; }
+    
+    body.theme-candyland #rematchPopup .popup-inner { background: linear-gradient(135deg, #f0fff0, #e6e6fa); border: 2px solid #98fb98; }
+    body.theme-candyland #rematchPopup h2 { color: #3cb371; }
+    body.theme-candyland #rematchPopup .btn-yes { background-color: #98fb98; color: #2e8b57; }
+    body.theme-candyland #rematchPopup .btn-yes:hover { background-color: #3cb371; color: white; }
+    body.theme-candyland #rematchPopup .btn-no { background-color: #ffb6c1; color: #c71585; }
+    body.theme-candyland #rematchPopup .btn-no:hover { background-color: #ff69b4; color: white; }
+
+    /* ===== HALLOWEEN THEME ===== */
+    body.theme-halloween {
+        background: linear-gradient(135deg, #1a1a1a, #331a00); /* Dark, earthy gradient */
+        color: #f0f0f0; /* Light text */
+    }
+    body.theme-halloween .app-container,
+    body.theme-halloween .header-bar,
+    body.theme-halloween .nav-bar,
+    body.theme-halloween .game-mode-card,
+    body.theme-halloween .player-vs-player,
+    body.theme-halloween .info-card,
+    body.theme-halloween .popup-inner,
+    body.theme-halloween .input,
+    body.theme-halloween .list-container,
+    body.theme-halloween #gameInviteNotificationPopup,
+    body.theme-halloween #inviteDeclinedNotificationPopup { /* Added for new notification */
+        background-color: #2a2a2a; /* Dark background for elements */
+        box-shadow: 0 0 20px rgba(255, 140, 0, 0.4); /* Orange glow */
+        border: 1px solid #ff8c00; /* Dark orange border */
+    }
+    body.theme-halloween .section-title { color: #ff8c00; }
+    body.theme-halloween .section-subtitle,
+    body.theme-halloween .player-box span,
+    body.theme-halloween .info-card,
+    body.theme-halloween .tab-button,
+    body.theme-halloween .list-item-info span,
+    body.theme-halloween .list-item-info small,
+    body.theme-halloween .popup-inner h2,
+    body.theme-halloween .popup-inner label,
+    body.theme-halloween .popup-inner p { color: #e0e0e0; }
+    body.theme-halloween .top-icon,
+    body.theme-halloween .nav-item { color: #ffa500; }
+    body.theme-halloween .nav-item.active,
+    body.theme-halloween .nav-item:hover,
+    body.theme-halloween .top-icon:hover { color: #8a2be2; }
+    body.theme-halloween .tab-button.active { background-color: #4d004d; color: #ffa500; border-bottom-color: #ffa500; }
+    body.theme-halloween .tab-button:hover:not(.active) { background-color: #330033; color: #ff8c00; }
+    body.theme-halloween .list-item { border-bottom-color: #4d004d; }
+    body.theme-halloween .btn-blue { background-color: #8a2be2; }
+    body.theme-halloween .btn-blue:hover { background-color: #6a0dad; }
+    body.theme-halloween .btn-green { background-color: #32cd32; }
+    body.theme-halloween .btn-green:hover { background-color: #228b22; }
+    body.theme-halloween .btn-red { background-color: #dc143c; }
+    body.theme-halloween .btn-red:hover { background-color: #8b0000; }
+    body.theme-halloween .google-signin-button { background-color: #663399; color: white; }
+    body.theme-halloween .google-signin-button:hover { background-color: #4b0082; }
+    body.theme-halloween .toggle-button.on { background-color: #34d399; }
+    body.theme-halloween .toggle-button.off { background-color: #ef4444; }
+    body.theme-halloween .candy-btn { background-color: #f0f0f0; border: 2px solid #ff8c00; }
+    body.theme-halloween .candy-btn.poison-candy { border: 3px solid #ff0000; box-shadow: 0 0 15px rgba(255, 0, 0, 0.6); }
+    body.theme-halloween .candy-btn:hover:not(:disabled) { border-color: #8a2be2; }
+    body.theme-halloween .glass-selected { background-color: rgba(138, 43, 226, 0.3) !important; border: 2px solid rgba(138, 43, 226, 0.6) !important; box-shadow: 0 4px 8px rgba(138, 43, 226, 0.3) !important; }
+
+    body.theme-halloween #editProfilePopup .popup-inner { background: linear-gradient(135deg, #4b0082, #2a2a2a); border: 2px solid #ff8c00; }
+    body.theme-halloween #editProfilePopup h2 { color: #ffa500; }
+    body.theme-halloween #editProfilePopup label { color: #ffc966; }
+    body.theme-halloween #editProfilePopup .input { background-color: #1a1a1a; border-color: #4d4d4d; color: #f0f0f0; }
+    body.theme-halloween #editProfilePopup .input:focus { border-color: #ff8c00; box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.3); }
+    body.theme-halloween #editProfilePopup #editAvatarPreview { border-color: #ff8c00; }
+    body.theme-halloween #editProfilePopup .btn-save { background-color: #8a2be2; }
+    body.theme-halloween #editProfilePopup .btn-save:hover { background-color: #9932cc; }
+    body.theme-halloween #editProfilePopup .btn-cancel { background-color: #dc143c; }
+    body.theme-halloween #editProfilePopup .btn-cancel:hover { background-color: #b22222; }
+
+    body.theme-halloween #rematchPopup .popup-inner { background: linear-gradient(135deg, #331a00, #1a1a1a); border: 2px solid #32cd32; }
+    body.theme-halloween #rematchPopup h2 { color: #9acd32; }
+    body.theme-halloween #rematchPopup .btn-yes { background-color: #32cd32; }
+    body.theme-halloween #rematchPopup .btn-yes:hover { background-color: #228b22; }
+    body.theme-halloween #rematchPopup .btn-no { background-color: #dc143c; }
+    body.theme-halloween #rematchPopup .btn-no:hover { background-color: #b22222; }
+
+
+    /* ===== FONT SIZE CLASSES (Apply to body) ===== */
+    body.font-size-small { font-size: 0.85em; }
+    body.font-size-medium { font-size: 1em; }
+    body.font-size-large { font-size: 1.15em; }
+
+
+    /* ===== CANDY SIZE CLASSES (Apply to #grid button) ===== */
+    #grid button.candy-size-small {
+        width: 20vw; height: 20vw; max-width: 90px; max-height: 90px;
+        font-size: 5.5vh; max-font-size: 2.5rem; border-radius: 0.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    #grid button.candy-size-medium {
+        width: 24.5vw; height: 24.5vw; max-width: 145px; max-height: 145px;
+        font-size: 10.5vh; max-font-size: 5.5rem; border-radius: 1rem; box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    #grid button.candy-size-large {
+        width: 28vw; height: 28vw; max-width: 170px; max-height: 170px;
+        font-size: 13vh; max-font-size: 7rem; border-radius: 1.2rem; box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+    }
+    #grid button {
+        background-color: white; border: 2px solid #e2e8f0; padding: 0.5vw;
+        display: flex; align-items: center; justify-content: center;
+        transition: transform 0.1s ease-in-out, box-shadow 0.2s, border-color 0.2s, background-color 0.2s;
+    }
+    #grid button:hover:not(:disabled) {
+        transform: scale(1.08); box-shadow: 0 6px 12px rgba(0,0,0,0.25); border-color: #a855f7;
+    }
+    #grid button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .glass-selected {
+        background-color: rgba(96, 165, 250, 0.3) !important; border: 2px solid rgba(96, 165, 250, 0.6) !important;
+        box-shadow: 0 4px 8px rgba(96, 165, 250, 0.3) !important;
+    }
+    .poison-candy { border: 3px solid #dc2626; box-shadow: 0 0 15px rgba(220, 38, 38, 0.6); }
+
+
+    /* Main container for the app */
+    .app-container {
+        display: flex; flex-direction: column; width: 100%; max-width: 480px; height: 100vh;
+        background-color: #fefefe; box-shadow: 0 0 20px rgba(0,0,0,0.1); position: relative;
+    }
+
+    /* Header Bar */
+    .header-bar {
+        display: flex; justify-content: space-between; align-items: center; padding: 1vh 2vw;
+        background-color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.05); z-index: 10;
+        width: 100%; flex-shrink: 0;
+    }
+    .profile-icon-container {
+        display: flex; align-items: center; gap: 2vw;
+        /* NEW: Flex-grow to take available space */
+        flex-grow: 1; 
+    }
+    /* NEW: Container for coins and gems to align them to the right */
+    .currency-icons-container {
+      display: flex;
+      align-items: center;
+      gap: 1vw; /* Space between icons */
+      justify-content: flex-end; /* Align to the right */
+    }
+    .currency-item {
+        display: flex;
+        align-items: center;
+        background-color: #f0f4f8; /* Light gray background */
+        border: 1px solid #dcdfe4;
+        border-radius: 9999px; /* Fully rounded corners */
+        padding: 0.5vh 2vw; /* Vertical and horizontal padding */
+        font-size: 2vh;
+        font-weight: 600;
+        color: #4a5568;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .currency-item img {
+        width: 4vw;
+        height: 4vw;
+        max-width: 20px;
+        max-height: 20px;
+        margin-right: 1vw;
+    }
+    .currency-item .add-btn {
+        margin-left: 1vw;
+        padding: 0 0.5vw;
+        font-size: 2.5vh;
+        color: #10b981;
+        cursor: pointer;
+    }
+
+    .profile-icon {
+        width: 10vw; height: 10vw; max-width: 50px; max-height: 50px; border-radius: 50%;
+        object-fit: cover; border: 2px solid #a855f7; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        transition: transform 0.2s ease;
+    }
+    .profile-icon:hover { transform: scale(1.05); }
+    .top-right-icons { display: flex; align-items: center; gap: 2vw; }
+    .top-icon {
+        font-size: 4vw; max-font-size: 1.8rem; color: #718096; cursor: pointer;
+        transition: color 0.2s ease, transform 0.2s ease;
+    }
+    .top-icon:hover { color: #a855f7; transform: scale(1.1); }
+
+    /* Main Content Area */
+    .main-content {
+        flex-grow: 1; padding: 2vh 2vw; display: flex; flex-direction: column;
+        align-items: center; justify-content: flex-start; width: 100%; overflow-y: auto;
+    }
+    .game-section {
+        width: 100%; max-width: 450px; display: flex; flex-direction: column;
+        align-items: center; flex-grow: 1;
+    }
+    .section-title {
+        font-size: 4.5vh; font-weight: bold; color: #ef4444; text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        margin-bottom: 1vh;
+    }
+    .section-subtitle {
+        font-size: 3vh; font-weight: 600; color: #4a5568; margin-bottom: 3vh;
+    }
+
+    /* Game Mode Cards (Lobby) */
+    .game-mode-card {
+        background-color: white; border-radius: 1.5rem;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        padding: 3vh 3vw; text-align: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;
+        width: 90%; max-width: 350px; height: 20vh; display: flex; flex-direction: column;
+        justify-content: center; align-items: center; margin-bottom: 2vh;
+    }
+    .game-mode-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 20px -5px rgba(0, 0, 0, 0.15), 0 6px 10px -3px rgba(0, 0, 0, 0.08);
+    }
+    .game-mode-card .icon { font-size: 7vh; margin-bottom: 1vh; color: #a855f7; }
+    .game-mode-card h3 { font-size: 3vh; font-weight: 600; color: #4a5568; }
+    .game-mode-card p { font-size: 1.8vh; color: #718096; margin-top: 1vh; }
+
+    /* Bottom Navigation Bar */
+    .nav-bar {
+        display: flex; justify-content: space-around; align-items: center; width: 100%;
+        padding: 1.5vh 0; background-color: #fff; box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
+        z-index: 10; flex-shrink: 0;
+    }
+    .nav-item {
+        display: flex; flex-direction: column; align-items: center; cursor: pointer;
+        color: #718096; transition: color 0.2s ease, transform 0.2s ease;
+        font-size: 1.8vh; font-weight: 500;
+        flex: 1; /* NEW: Ensure items space out evenly */
+    }
+    .nav-item.active { color: #a855f7; transform: translateY(-0.5vh); }
+    .nav-item:hover { color: #a855f7; }
+    .nav-item .icon { font-size: 3.5vh; margin-bottom: 0.5vh; }
+
+    /* Popups (General Styling) */
+    .popup {
+        position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+        background-color: rgba(0, 0, 0, 0.4); z-index: 1000; backdrop-filter: blur(5px);
+        overflow-y: auto; padding: 2vh 2vw;
+    }
+    .popup-inner {
+        background-color: white; padding: 4vh 4vw; border-radius: 1.5rem;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2); max-width: 450px; width: 90%;
+        text-align: center; max-height: 90vh; overflow-y: auto;
+    }
+    .popup-inner .input { margin-bottom: 2vh; }
+
+    /* Specific Popup Adjustments */
+    #auth {
+        position: absolute; inset: 0; background-color: #fefefe; z-index: 20;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4vh 4vw;
+    }
+    #auth .login-register-form { width: 100%; max-width: 300px; margin-top: 3vh; }
+    #auth .input {
+        width: 100%; padding: 1.5vh; border: 1px solid #e2e8f0; border-radius: 0.5rem; margin-bottom: 2vh;
+    }
+    #auth .btn-blue, #auth .btn-green {
+        width: 100%; padding: 1.5vh; border-radius: 0.75rem; font-weight: 600; color: white;
+        cursor: pointer; transition: background-color 0.2s ease;
+    }
+    #auth .btn-blue { background-color: #60a5fa; }
+    #auth .btn-blue:hover { background-color: #3b82f6; }
+    #auth .btn-green { background-color: #34d399; }
+    #auth .btn-green:hover { background-color: #22c55e; }
+    #auth .google-signin-button {
+        background-color: #db4437; color: white; padding: 1.5vh 3vw; border-radius: 0.75rem;
+        font-weight: 600; cursor: pointer; transition: background-color 0.2s ease-in-out;
+        margin-top: 2vh; width: 100%; max-width: 280px; margin-left: auto; margin-right: auto;
+        display: flex; align-items: center; justify-content: center; gap: 1vw;
+    }
+    #auth .google-signin-button:hover { background-color: #c0392b; }
+    #auth .google-signin-button img { width: 4vw; height: 4vw; max-width: 20px; max-height: 20px; }
+
+    /* Game Area (when game is active) */
+    #gameArea {
+        position: absolute; inset: 0; background-color: #fefefe; z-index: 15;
+        display: flex; flex-direction: column; align-items: center; justify-content: flex-start; 
+        padding: 1vh 2vw; height: 100vh; width: 100vw; max-width: 480px; margin: 0 auto; box-sizing: border-box;
+    }
+    
+    /* NEW: Position in-game powerups container at the top */
+    #inGamePowerupsContainer {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        padding-top: 1vh;
+        flex-shrink: 0;
+    }
+
+
+    /* Player VS Player Section - Moved to top */
+    #playerVsPlayerSection {
+        background-color: white; border-radius: 1.5rem; box-shadow: 0 5px 10px rgba(0,0,0,0.08);
+        padding: 1.5vh 3vw; display: flex; align-items: center; justify-content: space-around;
+        gap: 2vw; margin-top: 1.5vh; margin-bottom: 1.5vh; width: 90%; max-width: 350px; flex-shrink: 0;
+    }
+    .player-box { display: flex; flex-direction: column; align-items: center; gap: 0.3vh; text-align: center; }
+    .player-box img {
+        width: 10vw; height: 10vw; max-width: 50px; max-height: 50px; border-radius: 9999px;
+        object-fit: cover; border: 2px solid #a855f7; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .player-box span { font-size: 2vh; max-font-size: 0.9rem; font-weight: 600; color: #4a5568; }
+    .vs-text { font-size: 3vh; max-font-size: 1.3rem; font-weight: 700; color: #a855f7; }
+
+    /* Info Card - Positioned right below avatars */
+    .info-card {
+        background-color: white; border-radius: 1.5rem; box-shadow: 0 5px 10px rgba(0,0,0,0.08);
+        padding: 1.5vh 3vw; text-align: center; font-size: 2.2vh; max-font-size: 1rem;
+        font-weight: 500; color: #4a5568; width: 90%; max-width: 350px;
+        margin-top: 1.5vh; margin-bottom: 2.5vh; flex-shrink: 0;
+    }
+    #gameArea #grid {
+        display: grid; grid-template-columns: repeat(4, 1fr); gap: 1vw; width: 100%;
+        max-width: 98vw; flex-grow: 1; justify-content: center; align-content: center; margin-bottom: 2.5vh;
+    }
+
+    /* Exit Game Button */
+    #gameArea #exitGameBtn { /* Used an ID to be specific */
+        margin-top: auto; padding: 1.8vh 4vw; font-size: 3vh;
+        max-font-size: 1.2rem; border-radius: 0.75rem; font-weight: 600; color: white;
+        background-color: #ef4444; transition: background-color 0.2s ease-in-out;
+        cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    #gameArea #exitGameBtn:hover { background-color: #dc2626; }
+
+    /* Custom Confirm Dialog Styling */
+    #customConfirm .popup-inner {
+        background-color: #ffe0e0; border: none; color: #4a5568;
+        animation: fadeInScale 0.3s ease-out forwards, pulse 2s infinite ease-in-out;
+    }
+    #customConfirm #confirmMessage { color: #4a5568; }
+    #confirmCancel {
+        background-color: #e2e8f0; color: #4a5568; transition: background-color 0.2s ease-in-out;
+    }
+    #confirmCancel:hover { background-color: #cbd5e1; }
+    #confirmOk { background-color: #ef4444; color: white; transition: background-color 0.2s ease-in-out; }
+    #confirmOk:hover { background-color: #dc2626; }
+
+    @keyframes fadeInScale {
+        from { opacity: 0; transform: scale(0.9); }
+        to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes pulse {
+        0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); }
+    }
+
+    /* Loader Styles */
+    .loader-overlay {
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background-color: rgba(0, 0, 0, 0.6); display: flex; justify-content: center;
+        align-items: center; z-index: 9999; transition: opacity 0.3s ease-in-out;
+        opacity: 0; pointer-events: none;
+    }
+    .loader-overlay.show { opacity: 1; pointer-events: auto; }
+    .spinning-candy { font-size: 10vh; display: inline-block; animation: candySpin 1.5s linear infinite; }
+    @keyframes candySpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* Helper class for display: none; */
+    .hidden { display: none !important; }
+
+    /* Styles for toggle buttons (Sound/Music) */
+    .toggle-button {
+        padding: 1.5vh 3vw; border-radius: 9999px; font-weight: 600;
+        transition: all 0.2s ease-in-out; cursor: pointer; display: flex;
+        align-items: center; justify-content: center; gap: 1vw; width: 30vw; max-width: 150px;
+    }
+    .toggle-button.on { background-color: #34d399; color: white; box-shadow: 0 4px 6px rgba(52, 211, 153, 0.3); }
+    .toggle-button.off { background-color: #fca5a5; color: white; box-shadow: 0 4px 6px rgba(252, 165, 165, 0.3); }
+    .toggle-button:hover { transform: translateY(-2px); }
+
+    /* Google Sign-In Button */
+    .google-signin-button {
+        display: flex; align-items: center; justify-content: center; gap: 1vw;
+        background-color: #db4437; color: white; padding: 1.5vh 3vw; border-radius: 0.75rem;
+        font-weight: 600; cursor: pointer; transition: background-color 0.2s ease-in-out;
+        margin-top: 2vh; width: 100%; max-width: 280px; margin-left: auto; margin-right: auto;
+        display: flex; align-items: center; justify-content: center; gap: 1vw;
+    }
+    .google-signin-button:hover { background-color: #c0392b; }
+    .google-signin-button img { width: 4vw; height: 4vw; max-width: 20px; max-height: 20px; }
+
+    /* New Styles for Friends Feature */
+    .friend-tabs { border-bottom: 2px solid #e2e8f0; margin-bottom: 3vh; }
+    .tab-button {
+        flex: 1; padding: 1.5vh 2vw; font-weight: 600; color: #718096; background-color: transparent;
+        border: none; border-bottom: 3px solid transparent; cursor: pointer;
+        transition: all 0.2s ease-in-out; border-radius: 0.5rem 0.5rem 0 0;
+    }
+    .tab-button:hover:not(.active) { background-color: #f7fafc; color: #4a5568; }
+    .tab-button.active { color: #a855f7; border-bottom-color: #a855f7; background-color: #f0e6ff; }
+    .tab-button:hover:not(.active) { background-color: #f7fafc; color: #4a5568; }
+    .list-container {
+        max-height: 40vh; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 0.75rem;
+        padding: 2vh 2vw; background-color: #f7fafc; width: 100%;
+    }
+    .list-item {
+        display: flex; align-items: center; gap: 2vw; padding: 1.5vh 0; border-bottom: 1px solid #edf2f7;
+    }
+    .list-item:last-child { border-bottom: none; }
+    .list-item img {
+        width: 10vw; height: 10vw; max-width: 48px; max-height: 48px; border-radius: 9999px;
+        object-fit: cover; border: 2px solid #a855f7;
+    }
+    .list-item-info { flex-grow: 1; text-align: left; }
+    .list-item-info span { font-weight: 600; color: #4a5568; display: block; font-size: 2.2vh; }
+    .list-item-info small { color: #718096; font-size: 1.6vh; }
+    .list-item-actions { display: flex; gap: 1vw; }
+    .list-item-actions button {
+        padding: 1vh 1.5vw; border-radius: 0.5rem; font-size: 1.8vh; font-weight: 600;
+        cursor: pointer; border: none; transition: background-color 0.2s;
+    }
+    .list-item-actions .btn-accept { background-color: #34d399; color: white; }
+    .list-item-actions .btn-accept:hover { background-color: #22c55e; }
+    .list-item-actions .btn-reject, .list-item-actions .btn-remove { background-color: #f87171; color: white; }
+    .list-item-actions .btn-reject:hover, .list-item-actions .btn-remove:hover { background-color: #ef4444; }
+    .list-item-actions .btn-add { background-color: #60a5fa; color: white; }
+    .list-item-actions .btn-add:hover { background-color: #3b82f6; }
+    .list-item-status { font-size: 1.6vh; color: #718096; font-style: italic; }
+
+    /* Game Invite Notification Popup */
+    #gameInviteNotificationPopup {
+        position: fixed; top: 2vh; right: 2vw; background-color: rgba(255, 255, 255, 0.95);
+        border-radius: 1rem; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); padding: 2vh 2vw;
+        max-width: 80vw; z-index: 1100; display: flex; flex-direction: column; align-items: center;
+        text-align: center; gap: 1vh; transform: translateX(120%); transition: transform 0.5s ease-out;
+    }
+    #gameInviteNotificationPopup.show { transform: translateX(0); }
+    #gameInviteNotificationPopup img {
+        width: 15vw; height: 15vw; max-width: 60px; max-height: 60px; border-radius: 50%;
+        object-fit: cover; border: 2px solid #a855f7; margin-bottom: 1vh;
+    }
+    #gameInviteNotificationPopup p { font-size: 2.2vh; font-weight: 600; color: #4a5568; line-height: 1.2; }
+    #gameInviteNotificationPopup .button-group { display: flex; gap: 2vw; margin-top: 1.5vh; }
+    #gameInviteNotificationPopup .btn-decline {
+        background-color: #ef4444; color: white; padding: 1.2vh 2.5vw; border-radius: 0.75rem;
+        font-weight: 600; cursor: pointer; transition: background-color 0.2s ease;
+    }
+    #gameInviteNotificationPopup .btn-decline:hover { background-color: #dc2626; }
+    #gameInviteNotificationPopup .btn-accept {
+        background-color: #a855f7; color: white; padding: 1.2vh 2.5vw; border-radius: 0.75rem;
+        font-weight: 600; cursor: pointer; transition: background-color 0.2s ease;
+    }
+    #gameInviteNotificationPopup .btn-accept:hover { background-color: #9333ea; }
+
+    /* Invite Declined Notification Popup */
+    #inviteDeclinedNotificationPopup {
+        position: fixed; top: 2vh; right: 2vw; background-color: rgba(255, 255, 255, 0.95);
+        border-radius: 1rem; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); padding: 2vh 2vw;
+        max-width: 80vw; z-index: 1100; display: flex; flex-direction: column; align-items: center;
+        text-align: center; gap: 1vh; transform: translateX(120%); transition: transform 0.5s ease-out;
+    }
+    #inviteDeclinedNotificationPopup.show { transform: translateX(0); }
+    #inviteDeclinedNotificationPopup img {
+        width: 15vw; height: 15vw; max-width: 60px; max-height: 60px; border-radius: 50%;
+        object-fit: cover; border: 2px solid #ef4444; margin-bottom: 1vh;
+    }
+    #inviteDeclinedNotificationPopup p { font-size: 2.2vh; font-weight: 600; color: #4a5568; line-height: 1.2; }
+    #inviteDeclinedNotificationPopup .btn-ok {
+        background-color: #60a5fa; color: white; padding: 1.2vh 2.5vw; border-radius: 0.75rem;
+        font-weight: 600; cursor: pointer; transition: background-color 0.2s ease; margin-top: 1.5vh;
+    }
+    #inviteDeclinedNotificationPopup .btn-ok:hover { background-color: #3b82f6; }
+
+    /* NEW: Power-ups Styles */
+    .powerup-card {
+        background-color: #fff; border: 1px solid #e2e8f0; border-radius: 1rem;
+        padding: 1.5rem; text-align: center; transition: all 0.2s ease-in-out;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    .powerup-card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px rgba(0,0,0,0.1); }
+    .powerup-icon { font-size: 3rem; margin-bottom: 0.5rem; }
+    .powerup-name { font-size: 1.25rem; font-weight: 600; color: #4a5568; }
+    .powerup-description { font-size: 0.9rem; color: #718096; margin-top: 0.5rem; min-height: 40px; }
+    .powerup-count {
+        font-size: 1.1rem; font-weight: 700; color: #a855f7; margin-top: 1rem;
+        background-color: #f0e6ff; padding: 0.25rem 0.75rem; border-radius: 9999px;
+        display: inline-block;
+    }
+    .in-game-powerup-btn {
+        background-color: #fff; border: 2px solid #a855f7; border-radius: 50%;
+        width: 25px; height: 25px; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; cursor: pointer;
+        transition: all 0.2s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        position: relative;
+    }
+    .in-game-powerup-btn:hover:not(:disabled) { transform: scale(1.1); box-shadow: 0 4px 10px rgba(168, 85, 247, 0.3); }
+    .in-game-powerup-btn:disabled { opacity: 0.5; cursor: not-allowed; background-color: #e2e8f0; border-color: #cbd5e1; }
+    .in-game-powerup-btn .icon { font-size: 1.2rem; }
+    .in-game-powerup-btn .count {
+        position: absolute; top: -3px; right: -3px; background-color: #ef4444;
+        color: white; font-size: 0.6rem; font-weight: bold;
+        border-radius: 50%; width: 14px; height: 14px;
+        display: flex; align-items: center; justify-content: center;
+        border: 1px solid white;
+    }
+    .in-game-powerup-btn.active-shield { border-color: #34d399; box-shadow: 0 0 15px rgba(52, 211, 153, 0.6); }
+
+    /* NEW: Achievements & Leaderboard Styles */
+    .achievement-card {
+        background-color: #fff; border: 1px solid #e2e8f0; border-radius: 1rem;
+        padding: 1.5rem; text-align: center;
+    }
+    .achievement-card.locked { opacity: 0.6; filter: grayscale(1); }
+    .achievement-icon { font-size: 3rem; margin-bottom: 0.5rem; }
+    .achievement-name { font-size: 1.1rem; font-weight: 600; color: #4a5568; }
+    .achievement-description { font-size: 0.85rem; color: #718096; margin-top: 0.5rem; }
+
+    .leaderboard-item {
+        display: flex; align-items: center; padding: 0.75rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .leaderboard-item:last-child { border-bottom: none; }
+    .leaderboard-rank { font-size: 1.2rem; font-weight: bold; color: #a855f7; width: 40px; }
+    .leaderboard-avatar { width: 50px; height: 50px; border-radius: 50%; margin: 0 1rem; }
+    .leaderboard-name { font-weight: 600; flex-grow: 1; }
+    .leaderboard-stat { font-weight: 500; text-align: right; }
+
+
+    /* Media Queries for smaller screens (max-width: 600px) */
+    @media (max-width: 600px) {
+      .app-container { max-width: 100vw; }
+      .header-bar { padding: 1vh 3vw; }
+      .profile-icon { width: 12vw; height: 12vw; }
+      .top-icon { font-size: 5vw; }
+      .main-content { padding: 1.5vh 3vw; }
+      .section-title { font-size: 4vh; }
+      .section-subtitle { font-size: 2.5vh; margin-bottom: 2.5vh; }
+      .game-mode-card { padding: 2.5vh 4vw; height: 18vh; margin-bottom: 2vh; }
+      .game-mode-card .icon { font-size: 6vh; }
+      .game-mode-card h3 { font-size: 2.5vh; }
+      .game-mode-card p { font-size: 1.6vh; }
+      .nav-bar { padding: 1.2vh 0; }
+      .nav-item { font-size: 1.6vh; }
+      .nav-item .icon { font-size: 3vh; }
+      .popup-inner { padding: 3vh 5vw; }
+      #auth .input, #auth .btn-blue, #auth .btn-green, #auth .google-signin-button { padding: 1.2vh 2.5vw; font-size: 2vh; }
+      #auth .google-signin-button img { width: 5vw; height: 5vw; }
+      #gameArea { padding: 0.5vh 2vw; }
+      #playerVsPlayerSection { margin-top: 1.5vh; margin-bottom: 0.8vh; }
+      .player-box img { width: 10vw; height: 10vw; max-width: 40px; max-height: 40px; }
+      .player-box span { font-size: 1.8vh; }
+      .vs-text { font-size: 2.5vh; }
+      .info-card { padding: 1.2vh 2vw; margin-top: 0.8vh; margin-bottom: 1.5vh; font-size: 2.1vh; }
+      #gameArea #grid { max-width: 98vw; gap: 1.2vw; margin-bottom: 1.5vh; }
+      #grid button.candy-size-small { width: 18vw; height: 18vw; max-width: 80px; max-height: 80px; font-size: 4.5vh; }
+      #grid button.candy-size-medium { width: 23.5vw; height: 23.5vw; max-width: 135px; max-height: 135px; font-size: 9.5vh; }
+      #grid button.candy-size-large { width: 26vw; height: 26vw; max-width: 160px; max-height: 160px; font-size: 11.5vh; }
+      #gameArea #exitGameBtn { margin-top: auto; margin-bottom: 1.5vh; padding: 1.5vh 3vw; font-size: 2.5vh; }
+      .toggle-button { width: 40vw; font-size: 2vh; }
+      .list-item img { width: 12vw; height: 12vw; }
+      .list-item-info span { font-size: 2vh; }
+      .list-item-info small { font-size: 1.4vh; }
+      .list-item-actions button { padding: 0.8vh 1.2vw; font-size: 1.6vh; }
+      #gameInviteNotificationPopup, #inviteDeclinedNotificationPopup { top: 1.5vh; right: 1.5vw; padding: 1.5vh 1.5vw; max-width: 90vw; }
+      #gameInviteNotificationPopup img, #inviteDeclinedNotificationPopup img { width: 18vw; height: 18vw; }
+      #gameInviteNotificationPopup p, #inviteDeclinedNotificationPopup p { font-size: 2vh; }
+      #gameInviteNotificationPopup .button-group { gap: 1.5vw; }
+      #gameInviteNotificationPopup .btn-decline,
+      #gameInviteNotificationPopup .btn-accept,
+      #inviteDeclinedNotificationPopup .btn-ok { padding: 1vh 2vw; font-size: 1.8vh; }
+    }
+
+    /* Even smaller screens (e.g., iPhone SE) */
+    @media (max-width: 375px) {
+      .nav-item span { font-size: 1.2vh; } /* Adjust nav text size for small screens */
+      #playerVsPlayerSection { margin-top: 0.8vh; margin-bottom: 0.8vh; padding: 0.8vh 2vw; }
+      .player-box img { width: 11vw; height: 11vw; max-width: 38px; max-height: 38px; }
+      .player-box span { font-size: 1.7vh; }
+      .vs-text { font-size: 2.3vh; }
+      .info-card { padding: 1vh 2vw; margin-top: 0.6vh; margin-bottom: 1.2vh; font-size: 1.9vh; }
+      #gameArea #grid { max-width: 98vw; gap: 1vw; margin-bottom: 1.2vh; }
+      #grid button.candy-size-small { width: 17vw; height: 17vw; max-width: 75px; max-height: 75px; font-size: 4vh; }
+      #grid button.candy-size-medium { width: 22vw; height: 22vw; max-width: 105px; max-height: 105px; font-size: 9vh; }
+      #grid button.candy-size-large { width: 25vw; height: 25vw; max-width: 150px; max-height: 150px; font-size: 11vh; }
+      #gameArea #exitGameBtn { margin-top: auto; margin-bottom: 1.2vh; padding: 1.2vh 2.8vw; font-size: 2.2vh; }
+      #gameInviteNotificationPopup, #inviteDeclinedNotificationPopup { top: 1vh; right: 1vw; padding: 1vh 1vw; }
+      #gameInviteNotificationPopup img, #inviteDeclinedNotificationPopup img { width: 20vw; height: 20vw; }
+      #gameInviteNotificationPopup p, #inviteDeclinedNotificationPopup p { font-size: 1.8vh; }
+      #gameInviteNotificationPopup .btn-decline,
+      #gameInviteNotificationPopup .btn-accept,
+      #inviteDeclinedNotificationPopup .btn-ok { padding: 0.8vh 1.5vw; font-size: 1.6vh; }
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-pink-100 to-yellow-100 min-h-screen flex flex-col items-center justify-center">
+
+  <!-- Plan A ke liye Button Click Sound -->
+  <audio id="buttonClickSound" src="https://github.com/bilal779-debug/Poisonous-candy/raw/refs/heads/main/Buttons.mp3" preload="auto"></audio>
+  <!-- Plan D ke liye Background Music -->
+  <audio id="backgroundMusic" src="https://github.com/bilal779-debug/Poisonous-candy/raw/refs/heads/main/LOOP2.mp3" loop preload="auto"></audio>
+
+  <!-- Main App Container -->
+  <div class="app-container">
+
+    <!-- Auth Screen (Login/Register) -->
+    <div id="auth" class="text-center">
+        <h2 class="text-3xl font-bold text-pink-700 drop-shadow-md mb-6">Poisonous Candy</h2>
+        <div class="flex gap-4 justify-center mb-6">
+            <button id="showLoginBtn" class="px-6 py-2 rounded-lg font-semibold text-gray-700 bg-gray-200 shadow-md">Login</button>
+            <button id="showRegisterBtn" class="px-6 py-2 rounded-lg font-semibold text-gray-700 bg-gray-100 shadow-sm">Register</button>
+        </div>
+
+        <div id="loginForm" class="login-register-form">
+            <input id="loginName" type="text" placeholder="Enter your email" class="input" />
+            <input id="loginPass" type="password" placeholder="Enter your password" class="input" />
+            <div class="flex items-center justify-start w-full max-w-[300px] mt-2 mb-4">
+                <input type="checkbox" id="rememberMe" class="mr-2 h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded" />
+                <label for="rememberMe" class="text-sm text-gray-700">Remember Me</label>
+            </div>
+            <button onclick="window.login()" class="btn-blue mt-4">Login</button>
+            <a href="#" onclick="window.showForgotPasswordPopup()" class="block text-sm text-blue-600 hover:underline mt-2">Forgot Password?</a>
+            <button onclick="window.signInWithGoogle()" class="google-signin-button">
+              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google icon">
+              Sign in with Google
+            </button>
+        </div>
+
+        <div id="registerForm" class="login-register-form hidden">
+            <input id="regName" type="text" placeholder="Choose a username" class="input" />
+            <input id="regEmail" type="email" placeholder="Enter your email" class="input" />
+            <label for="regAvatar" class="text-gray-700 text-sm mb-1 mt-2 block text-left w-full max-w-[240px] mx-auto">Upload Avatar (Optional):</label>
+            <input id="regAvatar" type="file" accept="image/*" class="input" />
+            <img id="avatarPreview" class="w-16 h-16 rounded-full mx-auto hidden mt-2 mb-4 border-2 border-white shadow-md" alt="Avatar Preview" onerror="this.onerror=null; this.src='https://cdn-icons-png.flaticon.com/512/149/149071.png';" />
+            <input id="regPass" type="password" placeholder="Create a password" class="input" />
+            <input id="regConfirmPass" type="password" placeholder="Confirm your password" class="input" />
+            <button onclick="window.register()" class="btn-green mt-4">Register</button>
+            <button onclick="window.signInWithGoogle()" class="google-signin-button">
+              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google icon">
+              Sign in with Google
+            </button>
+        </div>
+    </div>
+
+    <!-- Header Bar (Visible after login) -->
+    <div id="headerBar" class="header-bar hidden">
+        <div class="profile-icon-container">
+            <img id="userProfileIcon" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" alt="Profile" class="profile-icon" onclick="window.openEditProfilePopup()" onerror="this.onerror=null; this.src='https://cdn-icons-png.flaticon.com/512/149/149071.png';">
+            <!-- NEW: Coins and Gems Display -->
+            <div class="currency-icons-container">
+                <!-- Gems Display -->
+                <div class="currency-item" id="gemsDisplay" onclick="window.openBuyCurrencyPopup('gems')">
+                    <img src="https://raw.githubusercontent.com/bilal779-debug/Poisonous-candy/refs/heads/main/gem.png" alt="Gems Icon">
+                    <span id="gemsCount">0</span>
+                    <i class="fas fa-plus add-btn"></i>
+                </div>
+                <!-- Coins Display -->
+                <div class="currency-item" id="coinsDisplay" onclick="window.openBuyCurrencyPopup('coins')">
+                    <img src="https://raw.githubusercontent.com/bilal779-debug/Poisonous-candy/refs/heads/main/coin.png" alt="Coins Icon">
+                    <span id="coinsCount">100</span>
+                    <i class="fas fa-plus add-btn"></i>
+                </div>
+            </div>
+        </div>
+        <div class="top-right-icons">
+            <i id="friendsIcon" class="fas fa-users top-icon" onclick="window.openFriendsPopup()"></i>
+            <i id="settingsIcon" class="fas fa-cog top-icon" onclick="window.openGameSettingsPopup()"></i>
+        </div>
+    </div>
+
+    <!-- Main Content Sections -->
+    <div id="mainContentArea" class="main-content flex-grow hidden">
+        
+        <!-- Lobby Section -->
+        <div id="lobbySection" class="game-section">
+            <h2 class="section-title">Poisonous Candy</h2>
+            <h3 class="section-subtitle">Select Game Mode</h3>
+            <div class="flex flex-col items-center w-full">
+                <div class="game-mode-card" onclick="window.openAiDifficultyPopup()">
+                    <span class="icon"><i class="fas fa-robot"></i></span> <!-- Added Robot Icon -->
+                    <h3>Play with AI</h3>
+                    <p>Challenge a smart AI opponent.</p>
+                </div>
+                <div class="game-mode-card" onclick="window.playClassicMode()">
+                    <span class="icon">🏆</span>
+                    <h3>Classic Mode</h3>
+                    <p>The original challenge.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Play with Friends Section -->
+        <div id="playWithFriendsSection" class="game-section hidden">
+            <h2 class="section-title">Poisonous Candy</h2>
+            <h3 class="section-subtitle">My Friends</h3>
+            <!-- Friends list for the main section, separate from the popup's list -->
+            <div id="myFriendsListMainSection" class="list-container w-full max-w-md">
+                <!-- Friends will be loaded here -->
+                <p class="text-gray-500 text-sm" id="noFriendsMessageMainSection">No friends yet. Add friends from the Friends icon in top right!</p>
+            </div>
+        </div>
+
+        <!-- Power-ups Section -->
+        <div id="powerUpsSection" class="game-section hidden">
+            <h2 class="section-title">Poisonous Candy</h2>
+            <h3 class="section-subtitle">Your Power-ups Inventory</h3>
+            <!-- Power-ups Grid -->
+            <div id="powerupsInventoryGrid" class="grid grid-cols-2 gap-4 w-full px-4">
+                <!-- Power-up cards will be dynamically inserted here by JS -->
+                <div class="powerup-card">
+                    <div class="powerup-icon">🛡️</div>
+                    <div class="powerup-name">Shield</div>
+                    <div class="powerup-description">Blocks one poisoned move</div>
+                    <button onclick="window.purchasePowerup('shield', 50)" class="btn-green px-4 py-2 text-sm rounded-lg mt-4">Buy for 50 <i class="fas fa-coins ml-1"></i></button>
+                    <span id="shieldCount" class="powerup-count hidden">x0</span>
+                </div>
+                <div class="powerup-card">
+                    <div class="powerup-icon">🎯</div>
+                    <div class="powerup-name">Sniper</div>
+                    <div class="powerup-description">Removes a tile from the board</div>
+                    <button onclick="window.purchasePowerup('sniper', 50)" class="btn-green px-4 py-2 text-sm rounded-lg mt-4">Buy for 50 <i class="fas fa-coins ml-1"></i></button>
+                    <span id="sniperCount" class="powerup-count hidden">x0</span>
+                </div>
+                <div class="powerup-card">
+                    <div class="powerup-icon">⏳</div>
+                    <div class="powerup-name">Time Freeze</div>
+                    <div class="powerup-description">Skips opponent’s turn</div>
+                    <button onclick="window.purchasePowerup('timeFreeze', 50)" class="btn-green px-4 py-2 text-sm rounded-lg mt-4">Buy for 50 <i class="fas fa-coins ml-1"></i></button>
+                    <span id="timeFreezeCount" class="powerup-count hidden">x0</span>
+                </div>
+                <div class="powerup-card">
+                    <div class="powerup-icon">💥</div>
+                    <div class="powerup-name">Double Strike</div>
+                    <div class="powerup-description">Allows two moves in one turn</div>
+                    <button onclick="window.purchasePowerup('doubleStrike', 50)" class="btn-green px-4 py-2 text-sm rounded-lg mt-4">Buy for 50 <i class="fas fa-coins ml-1"></i></button>
+                    <span id="doubleStrikeCount" class="powerup-count hidden">x0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- NEW: Leaderboard Section -->
+        <div id="leaderboardSection" class="game-section hidden">
+            <h2 class="section-title">Leaderboard</h2>
+            <h3 class="section-subtitle">Top Players</h3>
+            <div class="w-full max-w-md">
+                <div class="flex justify-center gap-2 mb-4 border-b-2 border-gray-200">
+                    <button class="tab-button active">All-Time</button>
+                    <button class="tab-button">Weekly</button>
+                    <button class="tab-button">Daily</button>
+                </div>
+                <div id="leaderboardList" class="list-container">
+                    <!-- Leaderboard items will be dynamically inserted here -->
+                    <div class="leaderboard-item">
+                        <span class="leaderboard-rank">1</span>
+                        <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png" class="leaderboard-avatar">
+                        <span class="leaderboard-name">Player One</span>
+                        <span class="leaderboard-stat">95% Win Rate</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- NEW: Achievements Section -->
+        <div id="achievementsSection" class="game-section hidden">
+            <h2 class="section-title">Achievements</h2>
+            <h3 class="section-subtitle">Your Badges</h3>
+            <div id="achievementsGrid" class="grid grid-cols-2 gap-4 w-full px-4">
+                <!-- Achievement cards will be dynamically inserted here -->
+                <div class="achievement-card">
+                    <div class="achievement-icon">🥇</div>
+                    <div class="achievement-name">First Win</div>
+                    <div class="achievement-description">Win your first match.</div>
+                </div>
+                <div class="achievement-card locked">
+                    <div class="achievement-icon">🍬</div>
+                    <div class="achievement-name">Candy Collector</div>
+                    <div class="achievement-description">Play 50 rounds.</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Bottom Navigation Bar (Visible after login) -->
+    <div id="navBar" class="nav-bar hidden">
+        <div class="nav-item active" id="navLobby" onclick="window.navigateToSection('lobby')">
+            <i class="fas fa-home icon"></i>
+            <span>Lobby</span>
+        </div>
+        <div class="nav-item" id="navPlayWithFriends" onclick="window.navigateToSection('playWithFriends')">
+            <i class="fas fa-user-friends icon"></i>
+            <span>Friends</span>
+        </div>
+        <div class="nav-item" id="navPowerUps" onclick="window.navigateToSection('powerUps')">
+            <i class="fas fa-bolt icon"></i>
+            <span>Power-ups</span>
+        </div>
+        <!-- NEW: Leaderboard Nav Item -->
+        <div class="nav-item" id="navLeaderboard" onclick="window.navigateToSection('leaderboard')">
+            <i class="fas fa-trophy icon"></i>
+            <span>Leaderboard</span>
+        </div>
+        <!-- NEW: Achievements Nav Item -->
+        <div class="nav-item" id="navAchievements" onclick="window.navigateToSection('achievements')">
+            <i class="fas fa-medal icon"></i>
+            <span>Achievements</span>
+        </div>
+    </div>
+
+  </div> <!-- End of app-container -->
+
+  <!-- Popups (These remain outside the main app flow, but within the body) -->
+
+  <!-- NEW: AI Difficulty Popup -->
+  <div id="aiDifficultyPopup" class="popup hidden">
+    <div class="popup-inner">
+      <h2 class="text-2xl font-bold mb-6">Select AI Difficulty</h2>
+      <div class="flex flex-col gap-4">
+        <button onclick="window.startAIGame('easy')" class="btn-green px-6 py-3 text-lg rounded-lg">😇 Easy</button>
+        <button onclick="window.startAIGame('medium')" class="btn-blue px-6 py-3 text-lg rounded-lg">😈 Medium</button>
+        <button onclick="window.startAIGame('hard')" class="btn-red px-6 py-3 text-lg rounded-lg">👿 Hard</button>
+      </div>
+      <button onclick="window.closeAiDifficultyPopup()" class="text-gray-500 text-sm mt-6">Cancel</button>
+    </div>
+  </div>
+  
+  <!-- NEW: Buy Currency Popup -->
+  <div id="buyCurrencyPopup" class="popup hidden">
+    <div class="popup-inner">
+      <h2 class="text-2xl font-bold mb-4">Buy More <span id="currencyType"></span></h2>
+      <p class="text-gray-700 mb-4">This feature is coming soon!</p>
+      <button onclick="window.closeBuyCurrencyPopup()" class="btn-blue px-6 py-3 rounded-lg font-semibold text-lg">OK</button>
+    </div>
+  </div>
+
+  <!-- Edit Profile Popup -->
+  <div id="editProfilePopup" class="popup hidden">
+    <div class="popup-inner">
+      <h2 class="text-2xl font-bold mb-4">Edit Profile</h2>
+      <label for="editName" class="block text-lg font-semibold mb-2 text-left w-full max-w-[280px] mx-auto">Username:</label>
+      <input id="editName" type="text" placeholder="New Username" class="input" />
+
+      <label for="editEmail" class="block text-lg font-semibold mb-2 text-left w-full max-w-[280px] mx-auto">Email (Optional):</label>
+      <input id="editEmail" type="email" placeholder="New Email" class="input" />
+
+      <label for="editAvatar" class="block text-lg font-semibold mb-2 text-left w-full max-w-[280px] mx-auto">Change Avatar (Optional):</label>
+      <input id="editAvatar" type="file" accept="image/*" class="input" />
+      <img id="editAvatarPreview" class="w-24 h-24 rounded-full mx-auto mt-2 mb-4 border-4 shadow-lg object-cover" alt="Avatar Preview" onerror="this.onerror=null; this.src='https://cdn-icons-png.flaticon.com/512/149/149071.png';" />
+
+      <div class="flex justify-center gap-4 mt-6">
+        <button onclick="window.updateProfile()" class="btn-save px-6 py-3 rounded-lg font-semibold text-lg text-white shadow-md hover:shadow-lg transition-all">Save Changes</button>
+        <button onclick="window.closeEditProfilePopup()" class="btn-cancel px-6 py-3 rounded-lg font-semibold text-lg text-white shadow-md hover:shadow-lg transition-all">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Settings Popup -->
+  <div id="gameSettingsPopup" class="popup hidden">
+    <div class="popup-inner">
+      <h2 class="text-2xl font-bold mb-6 text-gray-800">Game Settings</h2>
+      
+      <!-- General Settings Content -->
+      <div id="generalSettingsContent">
+        <div class="flex flex-col items-center gap-4">
+          <button id="soundToggleBtn" onclick="window.toggleSound()" class="toggle-button on">
+            <span class="text-xl">🔊</span> Sound: On
+          </button>
+          <button id="musicToggleBtn" onclick="window.toggleMusic()" class="toggle-button on">
+            <span class="text-xl">🎵</span> Music: On
+          </button>
+        </div>
+        <button onclick="window.showDisplaySettingsSection()" class="btn-blue px-6 py-3 rounded-lg font-semibold text-lg mt-6 shadow-md hover:shadow-lg">
+          <i class="fas fa-palette mr-2"></i> Display Settings
+        </button>
+        <button onclick="window.logout()" class="btn-red px-6 py-3 rounded-lg font-semibold text-lg mt-6 shadow-md hover:shadow-lg">Logout</button>
+      </div>
+
+      <!-- Display Settings Content -->
+      <div id="displaySettingsContent" class="mt-8 pt-6 border-t-2 border-gray-200 w-full hidden">
+        <h3 class="text-xl font-bold mb-4 text-gray-800">Display Settings</h3>
+        
+        <!-- Font Size Selector -->
+        <div class="mb-6">
+          <label class="block text-lg font-semibold text-gray-700 mb-2">Font Size:</label>
+          <div class="flex justify-center gap-3">
+            <button id="fontSizeSmallBtn" onclick="window.setFontSize('small')" class="px-4 py-2 rounded-lg font-semibold text-gray-700 bg-gray-100 shadow-sm text-sm">A Small</button>
+            <button id="fontSizeMediumBtn" onclick="window.setFontSize('medium')" class="px-4 py-2 rounded-lg font-semibold text-gray-700 bg-gray-200 shadow-md">A Medium</button>
+            <button id="fontSizeLargeBtn" onclick="window.setFontSize('large')" class="px-4 py-2 rounded-lg font-semibold text-gray-700 bg-gray-100 shadow-sm text-lg">A Large</button>
+          </div>
+        </div>
+
+        <!-- Candy Size Selector -->
+        <div class="mb-6">
+          <label class="block text-lg font-semibold text-gray-700 mb-2">Candy Size:</label>
+          <div class="flex justify-center gap-3">
+            <button id="candySizeSmallBtn" onclick="window.setCandySize('small')" class="px-4 py-2 rounded-lg font-semibold text-gray-700 bg-gray-100 shadow-sm">🍬 Small</button>
+            <button id="candySizeMediumBtn" onclick="window.setCandySize('medium')" class="px-4 py-2 rounded-lg font-semibold text-gray-700 bg-gray-200 shadow-md">🍬 Medium</button>
+            <button id="candySizeLargeBtn" onclick="window.setCandySize('large')" class="px-4 py-2 rounded-lg font-semibold text-gray-700 bg-gray-100 shadow-sm text-lg">🍬 Large</button>
+          </div>
+        </div>
+
+        <!-- Game Theme Selector -->
+        <div class="mb-6">
+          <label class="block text-lg font-semibold text-gray-700 mb-2">Game Theme:</label>
+          <div class="flex justify-center gap-3 flex-wrap">
+            <button id="themeLightBtn" onclick="window.setGameTheme('light')" class="px-4 py-2 rounded-lg font-semibold text-gray-700 bg-gray-200 shadow-md">☀️ Light</button>
+            <button id="themeDarkBtn" onclick="window.setGameTheme('dark')" class="px-4 py-2 rounded-lg font-semibold text-white bg-gray-800 shadow-md">🌙 Dark</button>
+            <button id="themeCandylandBtn" onclick="window.setGameTheme('candyland')" class="px-4 py-2 rounded-lg font-semibold text-pink-700 bg-pink-100 shadow-md">🍭 Candyland</button>
+            <button id="themeHalloweenBtn" onclick="window.setGameTheme('halloween')" onclick="window.setGameTheme('halloween')" class="px-4 py-2 rounded-lg font-semibold text-orange-700 bg-orange-900 shadow-md">🎃 Halloween</button>
+          </div>
+        </div
+        <button onclick="window.showGeneralSettingsSection()" class="btn-red px-6 py-3 rounded-lg font-semibold text-lg mt-4 shadow-md hover:shadow-lg">
+          <i class="fas fa-arrow-left mr-2"></i> Back to Settings
+        </button>
+      </div> <!-- End of Display Settings Content -->
+
+      <button onclick="window.closeGameSettingsPopup()" class="text-gray-500 text-sm mt-4">Close</button>
+    </div>
+  </div>
+
+  <!-- Forgot Password Popup -->
+  <div id="forgotPasswordPopup" class="popup hidden">
+    <div class="popup-inner">
+      <h2 class="text-2xl font-bold mb-4">Forgot Password</h2>
+      <p class="text-gray-700 mb-4">Enter your email to receive a password reset link.</p>
+      <input id="forgotEmailInput" type="email" placeholder="Your email address" class="input" />
+      <button onclick="window.sendPasswordResetEmail()" class="btn-blue mt-4">Send Reset Link</button>
+      <button onclick="window.closeForgotPasswordPopup()" class="text-gray-500 text-sm mt-4">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Friends Popup -->
+  <div id="friendsPopup" class="popup hidden">
+    <div class="popup-inner max-w-lg w-full">
+      <h2 class="text-2xl font-bold mb-4">Friends & Requests</h2>
+
+      <div class="flex justify-center gap-2 mb-4 friend-tabs">
+        <button id="tabMyFriends" onclick="window.showFriendsTab('myFriends')" class="tab-button active">My Friends</button>
+        <button id="tabFriendRequests" onclick="window.showFriendsTab('friendRequests')" class="tab-button">Requests</button>
+        <button id="tabSearchFriends" onclick="window.showFriendsTab('searchFriends')" class="tab-button">Search</button>
+      </div>
+
+      <!-- My Friends Section (inside popup) -->
+      <div id="myFriendsSection" class="friend-tab-content">
+        <h3 class="text-xl font-semibold mb-3">My Friends:</h3>
+        <div id="myFriendsListPopup" class="list-container">
+          <!-- Friends will be loaded here -->
+          <p class="text-gray-500 text-sm" id="noFriendsMessagePopup">No friends yet. Add friends from the Friends icon in top right!</p>
+        </div>
+      </div>
+
+      <!-- Friend Requests Section (inside popup) -->
+      <div id="friendRequestsSection" class="friend-tab-content hidden">
+        <h3 class="text-xl font-semibold mb-3">Friend Requests:</h3>
+        <div id="receivedRequestsList" class="list-container mb-4">
+          <h4 class="text-lg font-medium text-gray-700 mb-2">Received Requests:</h4>
+          <p class="text-gray-500 text-sm" id="noReceivedRequestsMessage">No new friend requests.</p>
+          <!-- Received requests will be loaded here -->
+        </div>
+        <div id="sentRequestsList" class="list-container">
+          <h4 class="text-lg font-medium text-gray-700 mb-2">Sent Requests:</h4>
+          <p class="text-gray-500 text-sm" id="noSentRequestsMessage">No sent requests.</p>
+          <!-- Sent requests will be loaded here -->
+        </div>
+      </div>
+
+      <!-- Search Friends Section (inside popup) -->
+      <div id="searchFriendsSection" class="friend-tab-content hidden">
+        <h3 class="text-xl font-semibold mb-3">Search for Players:</h3>
+        <div class="flex gap-2 mb-4">
+          <input id="searchFriendInput" type="text" placeholder="Enter username or email" class="input flex-grow max-w-full" />
+          <button onclick="window.searchUsers()" class="btn-blue px-4 py-2 rounded-lg">Search</button>
+        </div>
+        <div id="searchResultsList" class="list-container">
+          <!-- Search results will be loaded here -->
+          <p class="text-gray-500 text-sm" id="noSearchResultsMessage">Search for players by username or email.</p>
+        </div>
+      </div>
+
+      <button onclick="window.closeFriendsPopup()" class="text-gray-500 text-sm mt-6">Close</button>
+    </div>
+  </div>
+
+
+  <div id="gameArea" class="hidden flex flex-col items-center w-full max-w-md mx-auto">
+    <!-- NEW: In-Game Power-ups Container - MOVED HERE -->
+    <div id="inGamePowerupsContainer" class="w-full flex-shrink-0 flex justify-center gap-1rem p-2 z-10 hidden">
+      <!-- Shield Power-up -->
+      <button class="in-game-powerup-btn" onclick="window.usePowerup('shield')">
+        <span class="icon">🛡️</span>
+        <span id="inGameShieldCount" class="count">0</span>
+      </button>
+      <!-- Sniper Power-up -->
+      <button class="in-game-powerup-btn" onclick="window.usePowerup('sniper')">
+        <span class="icon">🎯</span>
+        <span id="inGameSniperCount" class="count">0</span>
+      </button>
+      <!-- Time Freeze Power-up -->
+      <button class="in-game-powerup-btn" onclick="window.usePowerup('timeFreeze')">
+        <span class="icon">⏳</span>
+        <span id="inGameTimeFreezeCount" class="count">0</span>
+      </button>
+      <!-- Double Strike Power-up -->
+      <button class="in-game-powerup-btn" onclick="window.usePowerup('doubleStrike')">
+        <span class="icon">💥</span>
+        <span id="inGameDoubleStrikeCount" class="count">0</span>
+      </button>
+    </div>
+    
+    <!-- Player VS Player Section - MOVED HERE -->
+    <div id="playerVsPlayerSection" class="player-vs-player hidden mx-auto">
+      <div class="player-box">
+        <img id="opponentAvatar" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" alt="Opponent Avatar" onerror="this.onerror=null; this.src='https://cdn-icons-png.flaticon.com/512/149/149071.png';" />
+        <span id="opponentName">Opponent</span>
+      </div>
+      <span class="vs-text">VS</span>
+      <div class="player-box">
+        <img id="yourAvatar" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" alt="Your Avatar" onerror="this.onerror=null; this.src='https://cdn-icons-png.flaticon.com/512/149/149071.png';" />
+        <span id="yourName">You</span>
+      </div>
+    </div>
+    <p id="info" class="info-card hidden mb-6"></p>
+    <div id="grid" class="grid grid-cols-4 hidden"></div> <!-- Removed gap-4 here -->
+    <button id="exitGameBtn" onclick="window.showExitConfirmation()" class="btn-red px-6 py-3 rounded-lg font-semibold text-lg mt-4">Exit Game</button>
+  </div>
+
+  <div id="winLoseNotification" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+    <div class="bg-white/90 backdrop-blur-md p-6 rounded-2xl shadow-xl text-center max-w-sm">
+      <h2 id="notificationTitle" class="text-2xl font-bold mb-2"></h2>
+      <p id="notificationMessage" class="mb-4"></p>
+      <p id="poisonInfo" class="text-sm text-gray-600 italic mb-4"></p>
+      <button onclick="window.hideNotification()" class="btn-blue px-6">Continue</button>
+    </div>
+  </div>
+
+  <div id="rematchPopup" class="popup hidden">
+    <div class="popup-inner">
+      <h2 class="text-2xl font-bold mb-4">Rematch?</h2>
+      <div class="flex justify-center gap-4">
+        <button onclick="window.requestRematch()" class="btn-yes px-8 py-3 rounded-lg font-semibold text-lg text-white shadow-md hover:shadow-lg transition-all">Yes</button>
+        <button onclick="window.closeRematchPopup()" class="btn-no px-8 py-3 rounded-lg font-semibold text-lg text-white shadow-md hover:shadow-lg transition-all">No</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="candyLoader" class="loader-overlay hidden">
+      <span class="spinning-candy">🍬</span>
+  </div>
+
+  <div id="customConfirm" class="popup hidden">
+    <div class="popup-inner">
+      <p class="text-gray-800 text-lg font-semibold mb-4" id="confirmMessage">Are you sure you want to exit the game?</p>
+      <div class="flex justify-center gap-4">
+        <button id="confirmCancel" class="px-4 py-2 rounded bg-gray-300 text-black hover:bg-gray-400">Cancel</button>
+        <button id="confirmOk" class="px-4 py-2 rounded bg-red-500 text-white hover:bg-red-600">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Invite Notification Popup (New Element) -->
+  <div id="gameInviteNotificationPopup" class="hidden">
+    <img id="inviteSenderAvatar" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" alt="Inviter Avatar" onerror="this.onerror=null; this.src='https://cdn-icons-png.flaticon.com/512/149/149071.png';" />
+    <p><span id="inviteSenderName"></span> Invite You To Play Game</p>
+    <div class="button-group">
+      <button id="declineInviteBtn" class="btn-decline">DECLINE</button>
+      <button id="acceptInviteBtn" class="btn-accept">ACCEPT</button>
+    </div>
+  </div>
+
+  <!-- Invite Declined Notification Popup (New Element) -->
+  <div id="inviteDeclinedNotificationPopup" class="hidden">
+    <img id="declinedSenderAvatar" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" alt="Declined Sender Avatar" onerror="this.onerror=null; this.src='https://cdn-icons-png.flaticon.com/512/149/149071.png';" />
+    <p><span id="declinedSenderName"></span> Declined Your Invite</p>
+    <p class="text-sm text-gray-600 italic">(Can't Play Right Now)</p>
+    <button onclick="window.hideInviteDeclinedNotification()" class="btn-ok">OK</button>
+  </script>
+
+  <script>
+    // Initialize floating candies with random positions
+    document.addEventListener('DOMContentLoaded', () => {
+      const candies = document.querySelectorAll('.floating-candies span');
+      candies.forEach(candy => {
+        candy.style.left = `${Math.random() * 100}vw`;
+        candy.style.animationDuration = `${15 + Math.random() * 10}s`;
+        candy.style.animationDelay = `${Math.random() * 5}s`;
+      });
+
+      // Set initial avatar preview if a default is available or user is logged in
+      const defaultAvatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+      // Ensure these are always set, even if main.js hasn't loaded user data yet
+      document.getElementById('editAvatarPreview').src = defaultAvatar;
+      document.getElementById('userProfileIcon').src = defaultAvatar;
+      document.getElementById('opponentAvatar').src = defaultAvatar;
+      document.getElementById('yourAvatar').src = defaultAvatar;
+      document.getElementById('inviteSenderAvatar').src = defaultAvatar;
+      document.getElementById('declinedSenderAvatar').src = defaultAvatar; // New: Declined invite avatar
+
+      // For list items in friends section, the onerror is on the template string in main.js
+    });
+
+    // Function to be called from main.js for showing game result
+    window.showGameResult = (title, message, poisonCandyDetails) => {
+      document.getElementById('notificationTitle').textContent = title;
+      document.getElementById('notificationMessage').textContent = message;
+      document.getElementById('poisonInfo').textContent = poisonCandyDetails;
+      document.getElementById('winLoseNotification').classList.remove('hidden');
+
+      if (title.includes("Win")) {
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+      }
+    };
+
+    // This function will now simply hide the notification and call a main.js function
+    window.hideNotification = () => {
+        document.getElementById('winLoseNotification').classList.add('hidden');
+        // Call a function in main.js to handle what happens next (rematch or lobby)
+        window.handleGameEndContinue();
+    };
+    
+    // NEW: Functions for Buy Currency Popup
+    window.openBuyCurrencyPopup = (currencyType) => {
+        const popup = document.getElementById('buyCurrencyPopup');
+        document.getElementById('currencyType').textContent = currencyType.charAt(0).toUpperCase() + currencyType.slice(1);
+        popup.classList.remove('hidden');
+    };
+    
+    window.closeBuyCurrencyPopup = () => {
+        document.getElementById('buyCurrencyPopup').classList.add('hidden');
+    };
+
+
+    // Functions to open/close the Team Battle Popup
+    window.openTeamBattlePopup = () => {
+      document.getElementById('teamBattlePopup').classList.remove('hidden');
+      document.getElementById('teamCodeInput').value = '';
+    };
+
+    window.closeTeamBattlePopup = () => {
+      document.getElementById('teamBattlePopup').classList.add("hidden");
+    };
+
+    // New: Functions to open/close Edit Profile Popup
+    window.openEditProfilePopup = () => {
+      document.getElementById('editProfilePopup').classList.remove('hidden');
+      document.getElementById('editName').value = window.playerName || '';
+      document.getElementById('editEmail').value = window.playerEmail || '';
+      document.getElementById('editAvatarPreview').src = window.playerAvatar || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+      document.getElementById('editAvatar').value = '';
+    };
+
+    window.closeEditProfilePopup = () => {
+      document.getElementById('editProfilePopup').classList.add("hidden");
+      document.getElementById('editAvatarPreview').src = window.playerAvatar || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+    };
+
+    // New: Functions to open/close Game Settings Popup
+    window.openGameSettingsPopup = () => {
+        document.getElementById('gameSettingsPopup').classList.remove('hidden');
+        window.showGeneralSettingsSection(); // Default to general settings when opening
+    };
+
+    window.closeGameSettingsPopup = () => {
+        document.getElementById('gameSettingsPopup').classList.add('hidden');
+    };
+
+    // New: Functions for navigating within Game Settings Popup
+    window.showGeneralSettingsSection = () => {
+        document.getElementById('generalSettingsContent').classList.remove('hidden');
+        document.getElementById('displaySettingsContent').classList.add('hidden');
+        // Update initial state of sound/music toggles when returning
+        // These are now handled by main.js's openGameSettingsPopup for initial load
+        // and by toggleSound/toggleMusic for changes. No need to re-update here.
+    };
+
+    window.showDisplaySettingsSection = () => {
+        document.getElementById('generalSettingsContent').classList.add('hidden');
+        document.getElementById('displaySettingsContent').classList.remove('hidden');
+        // Update initial state of display settings buttons when opening popup
+        window.updateButtonGroupActiveState(
+            ['fontSizeSmallBtn', 'fontSizeMediumBtn', 'fontSizeLargeBtn'],
+            `fontSize${window.currentFontSize.charAt(0).toUpperCase() + window.currentFontSize.slice(1)}Btn`
+        );
+        window.updateButtonGroupActiveState(
+            ['candySizeSmallBtn', 'candySizeMediumBtn', 'candySizeLargeBtn'],
+            `candySize${window.currentCandySize.charAt(0).toUpperCase() + window.currentCandySize.slice(1)}Btn`
+        );
+        window.updateButtonGroupActiveState(
+            ['themeLightBtn', 'themeDarkBtn', 'themeCandylandBtn', 'themeHalloweenBtn'],
+            `theme${window.currentGameTheme.charAt(0).toUpperCase() + window.currentGameTheme.slice(1)}Btn`
+        );
+    };
+
+
+    // New: Functions to open and close forgot password popup
+    window.showForgotPasswordPopup = () => {
+        document.getElementById('forgotPasswordPopup').classList.remove('hidden');
+        document.getElementById('forgotEmailInput').value = ''; // Clear email input
+    };
+
+    window.closeForgotPasswordPopup = () => {
+        document.getElementById('forgotPasswordPopup').classList.add('hidden');
+    };
+
+
+    window.closeRematchPopup = () => {
+        document.getElementById('rematchPopup').classList.add('hidden');
+        document.getElementById('gameArea').classList.add('hidden');
+        document.getElementById('playerVsPlayerSection').classList.add('hidden');
+
+        // --- FIX: Show the main content area and nav bar ---
+        document.getElementById('mainContentArea').classList.remove('hidden');
+        document.getElementById('navBar').classList.remove('hidden');
+        
+        // Navigate back to the Lobby section
+        window.navigateToSection('lobby'); 
+        
+        // Clear game-specific state
+        window.player = ""; // Clear global player variable
+        window.room = ""; // Clear global room variable
+        window.myTurn = false;
+        window.poisoned = {};
+        window.isAIMode = false;
+    };
+
+
+    // Placeholder functions for new game modes, to be implemented in main.js
+    // window.playClassicMode = () => { // This will be defined in main.js
+    //     alert("Classic Mode selected! (Functionality to be added)");
+    // };
+
+    // Functions for Game Invite Notification Popup (New)
+    window.showGameInviteNotification = (inviterName, inviterAvatar, gameRoomId, inviterUid) => {
+        const popup = document.getElementById('gameInviteNotificationPopup');
+        document.getElementById('inviteSenderAvatar').src = inviterAvatar || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+        document.getElementById('inviteSenderName').textContent = inviterName;
+        
+        const acceptBtn = document.getElementById('acceptInviteBtn');
+        const declineBtn = document.getElementById('declineInviteBtn');
+
+        // Remove previous event listeners to prevent multiple calls
+        const newAcceptBtn = acceptBtn.cloneNode(true);
+        const newDeclineBtn = declineBtn.cloneNode(true);
+        acceptBtn.parentNode.replaceChild(newAcceptBtn, acceptBtn);
+        declineBtn.parentNode.replaceChild(newDeclineBtn, declineBtn);
+
+        newAcceptBtn.onclick = () => window.acceptGameInvite(gameRoomId, inviterUid);
+        newDeclineBtn.onclick = () => window.declineGameInvite(gameRoomId, inviterUid);
+
+        popup.classList.add('show');
+        popup.classList.remove('hidden');
+    };
+
+    window.hideGameInviteNotification = () => {
+        const popup = document.getElementById('gameInviteNotificationPopup');
+        popup.classList.remove('show');
+        setTimeout(() => {
+            popup.classList.add('hidden');
+        }, 500); // Wait for transition to finish before hiding
+    };
+
+    // New: Functions for Invite Declined Notification Popup
+    window.showInviteDeclinedNotification = (declinedSenderName, declinedSenderAvatar) => {
+        const popup = document.getElementById('inviteDeclinedNotificationPopup');
+        document.getElementById('declinedSenderAvatar').src = declinedSenderAvatar || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+        document.getElementById('declinedSenderName').textContent = declinedSenderName;
+
+        popup.classList.add('show');
+        popup.classList.remove('hidden');
+    };
+
+    window.hideInviteDeclinedNotification = () => {
+        const popup = document.getElementById('inviteDeclinedNotificationPopup');
+        popup.classList.remove('show');
+        setTimeout(() => {
+            popup.classList.add('hidden');
+        }, 500); // Wait for transition to finish before hiding
+    };
+
+  </script>
+</body>
+</html>
