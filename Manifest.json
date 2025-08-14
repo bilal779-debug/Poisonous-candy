@@ -1,7 +1,7 @@
 {
   "name": "Poisonous Candy",
   "short_name": "Poison",
-  "start_url": "./Poison_candy/",
+  "start_url": "./Poisonous-candy/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#ff69b4",
