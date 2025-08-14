@@ -4,7 +4,7 @@ const CACHE_NAME = 'poisonous-candy-cache-v1';
 // List of all the files to cache from your GitHub repository.
 // Inka istemal `install` event ke dauran hoga.
 const urlsToCache = [
-  'https://raw.githubusercontent.com/bilal779-debug/Poisonous-candy/refs/heads/main/Poison.html',
+  'https://raw.githubusercontent.com/bilal779-debug/Poisonous-candy/refs/heads/main/index.html',
   'https://raw.githubusercontent.com/bilal779-debug/Poisonous-candy/refs/heads/main/Poison%20candy.js',
   'https://raw.githubusercontent.com/bilal779-debug/Poisonous-candy/refs/heads/main/style.css',
   'https://raw.githubusercontent.com/bilal779-debug/Poisonous-candy/refs/heads/main/coin.png',
