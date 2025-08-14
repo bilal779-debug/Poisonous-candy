@@ -4,13 +4,15 @@ const CACHE_NAME = 'poisonous-candy-cache-v1';
 // List of all the files to cache from your GitHub repository.
 // Inka istemal `install` event ke dauran hoga.
 const urlsToCache = [
-  'https://raw.githubusercontent.com/bilal779-debug/Poisonous-candy/refs/heads/main/index.html',
-  'https://raw.githubusercontent.com/bilal779-debug/Poisonous-candy/refs/heads/main/Poison%20candy.js',
-  'https://raw.githubusercontent.com/bilal779-debug/Poisonous-candy/refs/heads/main/style.css',
-  'https://raw.githubusercontent.com/bilal779-debug/Poisonous-candy/refs/heads/main/coin.png',
-  'https://raw.githubusercontent.com/bilal779-debug/Poisonous-candy/refs/heads/main/gem.png',
-  'https://raw.githubusercontent.com/bilal779-debug/Poisonous-candy/refs/heads/main/Buttons.mp3',
-  'https://raw.githubusercontent.com/bilal779-debug/Poisonous-candy/refs/heads/main/LOOP2.mp3',
+  './', // Yeh start_url ko cache karta hai.
+  './index.html',
+  './Poison candy.js',
+  './style.css',
+  './coin.png',
+  './gem.png',
+  './Buttons.mp3',
+  './LOOP2.mp3',
+  './Logo.png',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css',
   'https://cdn.tailwindcss.com',
   'https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js',
